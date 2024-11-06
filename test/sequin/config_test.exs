@@ -5,17 +5,29 @@ defmodule Sequin.ConfigTest do
   alias Sequin.Config
   alias Sequin.Databases.PostgresDatabase
   alias Sequin.Databases.Sequence
+  alias Sequin.Replication.PostgresReplicationSlot
+
+  setup_all %{} do
+    Application.put_env(:sequin, :self_hosted, true)
+  end
 
   describe "playground.yml" do
     @yml """
+    account:
+      name: "Playground"
+
+    users:
+      - email: "admin@sequinstream.com"
+        password: "sequinpassword!"
+
     databases:
       - name: "dune"
         username: "postgres"
         password: "postgres"
         hostname: "localhost"
         database: "dune"
-        replication_slot: "sequin_slot"
-        publication: "sequin_pub"
+        slot_name: "sequin_slot"
+        publication_name: "sequin_pub"
 
     sequences:
       - name: "characters"
@@ -29,11 +41,16 @@ defmodule Sequin.ConfigTest do
       assert :ok = Config.apply_config_from_yml(@yml)
 
       assert [account] = Repo.all(Account)
-      assert account.name == "Configured by Sequin"
+      assert account.name == "Playground"
 
       assert [%PostgresDatabase{} = db] = Repo.all(PostgresDatabase)
       assert db.account_id == account.id
       assert db.name == "dune"
+
+      assert [%PostgresReplicationSlot{} = replication] = Repo.all(PostgresReplicationSlot)
+      assert replication.postgres_database_id == db.id
+      assert replication.slot_name == "sequin_slot"
+      assert replication.publication_name == "sequin_pub"
 
       assert [%Sequence{} = sequence] = Repo.all(Sequence)
       assert sequence.postgres_database_id == db.id
@@ -47,11 +64,16 @@ defmodule Sequin.ConfigTest do
       assert :ok = Config.apply_config_from_yml(@yml)
 
       assert [account] = Repo.all(Account)
-      assert account.name == "Configured by Sequin"
+      assert account.name == "Playground"
 
       assert [%PostgresDatabase{} = db] = Repo.all(PostgresDatabase)
       assert db.account_id == account.id
       assert db.name == "dune"
+
+      assert [%PostgresReplicationSlot{} = replication] = Repo.all(PostgresReplicationSlot)
+      assert replication.postgres_database_id == db.id
+      assert replication.slot_name == "sequin_slot"
+      assert replication.publication_name == "sequin_pub"
 
       assert [%Sequence{} = sequence] = Repo.all(Sequence)
       assert sequence.postgres_database_id == db.id
@@ -69,6 +91,8 @@ defmodule Sequin.ConfigTest do
                    password: "postgres"
                    hostname: "localhost"
                    database: "dune"
+                   slot_name: "sequin_slot"
+                   publication_name: "sequin_pub"
                """)
 
       assert [account] = Repo.all(Account)
@@ -88,6 +112,8 @@ defmodule Sequin.ConfigTest do
                    password: "postgres"
                    hostname: "localhost"
                    database: "dune"
+                   slot_name: "sequin_slot"
+                   publication_name: "sequin_pub"
                """)
 
       assert [%PostgresDatabase{} = db] = Repo.all(PostgresDatabase)
